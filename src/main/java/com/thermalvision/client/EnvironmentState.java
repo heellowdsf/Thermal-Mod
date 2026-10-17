@@ -80,7 +80,7 @@ public class EnvironmentState {
             return;
         }
 
-        // === 平滑插值
+        // 平滑插值
         rainStrength += (targetRain - rainStrength) * LERP;
         snowy += (targetSnowy - snowy) * LERP;
         // 水下进出要快一点
@@ -111,10 +111,10 @@ public class EnvironmentState {
         double dist = Math.sqrt(distSq);
 
         // 距离衰减
-        // 现实：红外辐射随距离被大气吸收/扩散，越远越弱。
-        // 晴天：180 格内无衰减，180 格后越远越弱（约 360 格淡到最低）。
-        // 雨天：雨幕散射使有效距离缩短到 100 格内无衰减，100 格后较明显衰减，
-        //       雨越大远处淡得越彻底（可直接淡到与环境同色）。
+        // 现实：红外辐射随距离被大气吸收/扩散，越远越弱
+        // 晴天：180 格内无衰减，180 格后越远越弱（约 360 格淡到最低）
+        // 雨天：雨幕散射使有效距离缩短到 100 格内无衰减，100 格后较明显衰减
+        // 雨越大远处淡得越彻底（可直接淡到与环境同色）
         float nearDist, farDist, floor;
         if (rainStrength > 0.01f) {
             // 雨天：近 90 格无衰减，远端随雨势缩短（小雨~260，暴雨~180）
@@ -139,10 +139,10 @@ public class EnvironmentState {
         att *= 1f - rainStrength * 0.06f;
 
         // 水的阻隔
-        // 注意：水的冷却效果由 HeatMap.entityCooling 平滑处理（每实体渐变），
-        // 这里不做硬切换——否则实体在水面上下浮动时 isUnderWater() 每 tick 抖动，
-        // 会导致 att 在 0.12↔1.0 间突变而疯狂闪烁。
-        // 仅当玩家自己在水下时，整体压暗远处（水吸收红外），且用平滑 underwater 值。
+        // 注意：水的冷却效果由 HeatMap.entityCooling 平滑处理（每实体渐变）
+        // 这里不做硬切换——否则实体在水面上下浮动时 isUnderWater() 每 tick 抖动
+        // 会导致 att 在 0.12↔1.0 间突变而疯狂闪烁
+        // 仅当玩家自己在水下时，整体压暗远处（水吸收红外），且用平滑 underwater 值
         if (underwater > 0.01f) {
             float waterDim = 1f - underwater * 0.5f * Math.min(1f, (float)(dist / 16.0));
             att *= Math.max(0.2f, waterDim);
