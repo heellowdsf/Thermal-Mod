@@ -13,11 +13,11 @@ import java.util.Map;
 
 /**
  * 这里我需要详细说明！！！因为有点复杂 
- * Oculus / Iris 光影兼容层 —— 热成像期间挂起光影管线，且不触发 reload。
+ * Oculus/Iris 光影兼容层，热成像期间挂起光影管线，且不触发reload
  *
- * ══════════════════════════════════════════════════════════════════════════
+ * --------------------------------------------------------------
  * 1、为什么热成像和光影天然冲突
- * ══════════════════════════════════════════════════════════════════════════
+ * --------------------------------------------------------------
  * 本mod的热成像是屏幕空间色键：实体经自定义 core shader 输出纯绿 (0,G,0)，
  * thermal_grayscale.fsh 靠 R≈0 && B≈0 && G>0.02 判定热源。这要求颜色管线从顶点
  * 输出到后处理读取全程不被改动。
@@ -27,9 +27,9 @@ import java.util.Map;
  * LightTextureMixin 的满亮度也被包自己的光照模型盖过，
  * SkyMixin / FogMixin / ParticleMixin 同样被接管。
  *
- * ══════════════════════════════════════════════════════════════════════════
+ * --------------------------------------------------------------
  * 2、为什么不用官方 API IrisApi.setShadersEnabledAndApply
- * ══════════════════════════════════════════════════════════════════════════
+ * --------------------------------------------------------------
  * 它内部走 Iris.reload()：
  *     irisConfig.initialize();
  *     destroyEverything();    // 销毁管线 + 卸载整个 shaderpack
@@ -38,9 +38,9 @@ import java.util.Map;
  * 读盘重新解析 + 重编译几十上百个 program，这就是那 2 秒卡帧
  * 对临时关一下光影而言这些工作一件都不需要做。
  *
- * ══════════════════════════════════════════════════════════════════════════
+ * --------------------------------------------------------------
  * 3、本类的做法：只换引用，不销毁
- * ══════════════════════════════════════════════════════════════════════════
+ * --------------------------------------------------------------
  * PipelineManager 的状态只有两处：
  *     private WorldRenderingPipeline pipeline;
  *     private final Map<NamespacedId, WorldRenderingPipeline> pipelinesPerDimension;
@@ -56,9 +56,9 @@ import java.util.Map;
  * 一旦变成 VanillaRenderingPipeline 就恒为 false，于是 thermal_entity core shader
  * 恢复执行、纯绿原样进帧缓冲、满亮度光照贴图重新有效、天空/雾/粒子拦截全部回归
  *
- * ══════════════════════════════════════════════════════════════════════════
+ * --------------------------------------------------------------
  * 4、唯一代价：区块必须重新网格化
- * ══════════════════════════════════════════════════════════════════════════
+ * --------------------------------------------------------------
  * VanillaRenderingPipeline 的构造函数会 setUseExtendedVertexFormat(false)。
  * Oculus 的扩展格式 XHFP 前 20 字节其实和 Embeddium 的 CompactChunkVertex 逐字节
  * 相同（同样的 POSITION_MATERIAL_MESH / COLOR_SHADE / BLOCK_TEXTURE / LIGHT_TEXTURE
@@ -76,23 +76,23 @@ import java.util.Map;
  * 恢复时 IrisChunkProgramOverrides 会重建 6 个地形 program（约 100~300ms）
  * 这是整个方案残留的唯一主线程开销
  *
- * ══════════════════════════════════════════════════════════════════════════
+ * --------------------------------------------------------------
  * 5、安全性
- * ══════════════════════════════════════════════════════════════════════════
+ * --------------------------------------------------------------
  * 全程反射，编译期零依赖，没装 Oculus 时所有方法都是空操作
- * 任何一个句柄解析失败 - fastPathAvailable = false，按 ALLOW_SLOW_FALLBACK
- * 决定是否退回官方 API（有卡顿）或直接放弃（热成像效果会不正确，但不会崩）
+ * 任何一个句柄解析失败 fastPathAvailable = false，按 ALLOW_SLOW_FALLBACK
+ * 决定是否退回官方API或直接放弃（热成像效果会不正确，但不会崩）
  *
- * 已对 Oculus 1.20.1 源码逐项核对：三个字段名、VanillaRenderingPipeline 同包
+ * Oculus 1.20.1看了之后讲就是：三个字段名、VanillaRenderingPipeline 同包
  * WorldRenderingSettings.INSTANCE 为 public static final
  * Iris.getPipelineManager()/getCurrentDimension() 为 public static
- * WorldRenderingPipeline.destroy() 存在。
+ * WorldRenderingPipeline.destroy() 存在
  */
 public final class IrisCompat {
 
     /**
      * 快路径不可用时（例如 Oculus 改了内部结构）是否允许退回官方 API
-     * 官方 API 会触发完整 reload，有 1~3 秒硬卡顿；设为 false 则宁可放弃挂起
+     * 官方 API 会触发完整 reload，有 1-3 秒硬卡顿；设为 false 则宁可放弃挂起
      * 此时热成像在光影开启下效果不正确，但不会卡、不会崩
      */
     public static boolean ALLOW_SLOW_FALLBACK = true;
