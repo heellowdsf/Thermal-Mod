@@ -9,7 +9,7 @@ Minecraft 1.20.1 Forge mod
 | JDK | 17 |
 | Minecraft | 1.20.1 |
 | Forge | **≥ 47.4.1**（对应 gradle.properties 中的 `forge_version`，需改为此版本及以上） |
-| Gradle | 8.x（ForgeGradle 6.0.16 要求） |
+| Gradle | 8.x.x |
 | Embeddium | **必需依赖**：编译期使用本地 `libs/embeddium-0.3.31+mc1.20.1.jar`（compileOnly），运行时客户端也必须安装 Embeddium mod |
 
 注意：项目未包含 Gradle wrapper，需使用系统安装的 Gradle 执行命令。
@@ -18,13 +18,7 @@ Minecraft 1.20.1 Forge mod
 
 ```bash
 # 编译打包（产物在 build/libs/thermal-vision-forge-1.0.0.jar）
-gradle build
-
-# 启动客户端（开发调试）
-gradle runClient
-
-# 启动服务端
-gradle runServer
+gradle clean build
 ```
 
 ## 源码结构
