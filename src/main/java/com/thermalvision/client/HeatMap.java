@@ -23,7 +23,7 @@ public class HeatMap {
     private static final HashMap<UUID, Integer> stillTicks = new HashMap<>();
     private static int tick = 0;
 
-    // 开发者/整合包自定义热源：优先于内置表。值>0 视为热源(0~1)，值<=0 表示强制「不发热」。
+    // 开发者/整合包自定义热源：优先于内置表。值>0 视为热源(0~1)，值<=0 表示强制不发热
     private static final java.util.concurrent.ConcurrentHashMap<Block, Float> customHeat =
             new java.util.concurrent.ConcurrentHashMap<>();
 
