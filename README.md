@@ -8,7 +8,7 @@ Minecraft 1.20.1 Forge mod
 | --- | --- |
 | JDK | 17 |
 | Minecraft | 1.20.1 |
-| Forge | **≥ 47.4.1**（对应 gradle.properties 中的 `forge_version`，需改为此版本及以上） |
+| Forge | **≥ 47.4.1** |
 | Gradle | 8.x.x |
 | Embeddium | **必需依赖**：编译期使用本地 `libs/embeddium-0.3.31+mc1.20.1.jar`（compileOnly），运行时客户端也必须安装 Embeddium mod |
 
