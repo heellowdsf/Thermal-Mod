@@ -1,0 +1,7 @@
+{
+    "category.thermalvision": "热成像",
+    "key.thermalvision.toggle": "切换视觉设备",
+    "item.thermalvision.thermal_goggles": "热成像仪",
+    "item.thermalvision.night_vision_goggles": "夜视仪",
+    "item.thermalvision.thermal_module": "热成像模块"
+}

@@ -1,0 +1,14 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+        "IGI",
+        "GRG",
+        "IGI"
+    ],
+    "key": {
+        "I": { "item": "minecraft:iron_ingot" },
+        "G": { "item": "minecraft:gold_ingot" },
+        "R": { "item": "minecraft:redstone_block" }
+    },
+    "result": { "item": "thermalvision:thermal_module" }
+}
