@@ -16,9 +16,9 @@ import java.util.Map;
  * Oculus / Iris 光影兼容层 —— 热成像期间挂起光影管线，且不触发 reload。
  *
  * ══════════════════════════════════════════════════════════════════════════
- * 一、为什么热成像和光影天然冲突
+ * 1、为什么热成像和光影天然冲突
  * ══════════════════════════════════════════════════════════════════════════
- * 本 mod 的热成像是「屏幕空间色键」：实体经自定义 core shader 输出纯绿 (0,G,0)，
+ * 本mod的热成像是屏幕空间色键：实体经自定义 core shader 输出纯绿 (0,G,0)，
  * thermal_grayscale.fsh 靠 R≈0 && B≈0 && G>0.02 判定热源。这要求颜色管线从顶点
  * 输出到后处理读取全程不被改动。
  *
@@ -28,18 +28,18 @@ import java.util.Map;
  * SkyMixin / FogMixin / ParticleMixin 同样被接管。
  *
  * ══════════════════════════════════════════════════════════════════════════
- * 二、为什么不用官方 API IrisApi.setShadersEnabledAndApply
+ * 2、为什么不用官方 API IrisApi.setShadersEnabledAndApply
  * ══════════════════════════════════════════════════════════════════════════
  * 它内部走 Iris.reload()：
  *     irisConfig.initialize();
  *     destroyEverything();    // 销毁管线 + 卸载整个 shaderpack
  *     loadShaderpack();       // 从磁盘重新解析、预处理整个包
  *     preparePipeline(...);   // 主线程同步重编译全部 program
- * 读盘重新解析 + 重编译几十上百个 program，这就是那 2 秒硬卡帧。
- * 对「临时关一下光影」而言这些工作一件都不需要做。
+ * 读盘重新解析 + 重编译几十上百个 program，这就是那 2 秒卡帧
+ * 对临时关一下光影而言这些工作一件都不需要做。
  *
  * ══════════════════════════════════════════════════════════════════════════
- * 三、本类的做法：只换引用，不销毁
+ * 3、本类的做法：只换引用，不销毁
  * ══════════════════════════════════════════════════════════════════════════
  * PipelineManager 的状态只有两处：
  *     private WorldRenderingPipeline pipeline;
@@ -48,16 +48,16 @@ import java.util.Map;
  *
  * 所以只要把当前维度的 map 条目换成一个 VanillaRenderingPipeline，并把原来的
  * IrisRenderingPipeline 对象存在自己手里（不销毁），开销就是一次 HashMap put +
- * 一次字段赋值。恢复时塞回去即可。没有销毁、没有读盘、没有重编译。
+ * 一次字段赋值。恢复时塞回去即可。没有销毁、没有读盘、没有重编译
  *
  * 换完立刻生效的正是热成像最依赖的部分 —— MixinShaderInstance 与 MixinGameRenderer
  * 判断是否覆盖 core shader 用的都是：
  *     pipeline instanceof ShaderRenderingPipeline
  * 一旦变成 VanillaRenderingPipeline 就恒为 false，于是 thermal_entity core shader
- * 恢复执行、纯绿原样进帧缓冲、满亮度光照贴图重新有效、天空/雾/粒子拦截全部回归。
+ * 恢复执行、纯绿原样进帧缓冲、满亮度光照贴图重新有效、天空/雾/粒子拦截全部回归
  *
  * ══════════════════════════════════════════════════════════════════════════
- * 四、唯一代价：区块必须重新网格化
+ * 4、唯一代价：区块必须重新网格化
  * ══════════════════════════════════════════════════════════════════════════
  * VanillaRenderingPipeline 的构造函数会 setUseExtendedVertexFormat(false)。
  * Oculus 的扩展格式 XHFP 前 20 字节其实和 Embeddium 的 CompactChunkVertex 逐字节
@@ -65,35 +65,35 @@ import java.util.Map;
  * 与偏移），本来有机会免重建，但两边的属性绑定点错开了一位：
  *     Embeddium: POSITION=0, COLOR=1, TEXTURE=2, LIGHT=3
  *     Oculus   : POSITION=1, COLOR=2, TEXTURE=3, LIGHT=4
- * Embeddium 的默认区块着色器在 location 0 取位置，而扩展 VAO 把位置绑在 location 1，
+ * Embeddium 的默认区块着色器在 location 0 取位置，而扩展 VAO 把位置绑在 location 1
  * 所以必须 allChanged() 重新网格化。
  *
- * 但这对本 mod 是免费的 —— 开关镜本来就要重建区块给热源方块染绿
- * （原先的 rebuildChunksForHeat()），allChanged() 是替换它而不是额外开销。
- * 而且 Embeddium 的重新网格化在 worker 线程异步进行，主线程不阻塞，
- * 表现为区块陆续刷出而非冻屏 —— 与 reload 的同步 GLSL 编译不是一个量级。
+ * 但这对本mod是免费的 —— 开关镜本来就要重建区块给热源方块染绿
+ * （原先的 rebuildChunksForHeat()），allChanged() 是替换它而不是额外开销
+ * 而且 Embeddium 的重新网格化在 worker 线程异步进行，主线程不阻塞
+ * 表现为区块陆续刷出而非冻屏 —— 与 reload 的同步 GLSL 编译不是一个量级
  *
- * 恢复时 IrisChunkProgramOverrides 会重建 6 个地形 program（约 100~300ms），
- * 这是整个方案残留的唯一主线程开销。
+ * 恢复时 IrisChunkProgramOverrides 会重建 6 个地形 program（约 100~300ms）
+ * 这是整个方案残留的唯一主线程开销
  *
  * ══════════════════════════════════════════════════════════════════════════
- * 五、安全性
+ * 5、安全性
  * ══════════════════════════════════════════════════════════════════════════
- * 全程反射，编译期零依赖，没装 Oculus 时所有方法都是空操作。
- * 任何一个句柄解析失败 → fastPathAvailable = false，按 ALLOW_SLOW_FALLBACK
- * 决定是否退回官方 API（有卡顿）或直接放弃（热成像效果会不正确，但不会崩）。
+ * 全程反射，编译期零依赖，没装 Oculus 时所有方法都是空操作
+ * 任何一个句柄解析失败 - fastPathAvailable = false，按 ALLOW_SLOW_FALLBACK
+ * 决定是否退回官方 API（有卡顿）或直接放弃（热成像效果会不正确，但不会崩）
  *
- * 已对 Oculus 1.20.1 源码逐项核对：三个字段名、VanillaRenderingPipeline 同包、
- * WorldRenderingSettings.INSTANCE 为 public static final、
- * Iris.getPipelineManager()/getCurrentDimension() 为 public static、
+ * 已对 Oculus 1.20.1 源码逐项核对：三个字段名、VanillaRenderingPipeline 同包
+ * WorldRenderingSettings.INSTANCE 为 public static final
+ * Iris.getPipelineManager()/getCurrentDimension() 为 public static
  * WorldRenderingPipeline.destroy() 存在。
  */
 public final class IrisCompat {
 
     /**
-     * 快路径不可用时（例如 Oculus 改了内部结构）是否允许退回官方 API。
-     * 官方 API 会触发完整 reload，有 1~3 秒硬卡顿；设为 false 则宁可放弃挂起，
-     * 此时热成像在光影开启下效果不正确，但不会卡、不会崩。
+     * 快路径不可用时（例如 Oculus 改了内部结构）是否允许退回官方 API
+     * 官方 API 会触发完整 reload，有 1~3 秒硬卡顿；设为 false 则宁可放弃挂起
+     * 此时热成像在光影开启下效果不正确，但不会卡、不会崩
      */
     public static boolean ALLOW_SLOW_FALLBACK = true;
 
@@ -102,7 +102,7 @@ public final class IrisCompat {
     private static boolean apiAvailable = false;
     private static boolean warnedUser = false;
 
-    // ── 快路径反射句柄
+    //快路径反射句柄
     private static Method mGetPipelineManager;      // Iris.getPipelineManager()
     private static Method mGetCurrentDimension;     // Iris.getCurrentDimension()
     private static Field fPipeline;                 // PipelineManager.pipeline
@@ -112,12 +112,12 @@ public final class IrisCompat {
     private static Method mDestroyPipeline;         // WorldRenderingPipeline.destroy()
     private static Object worldRenderingSettings;   // WorldRenderingSettings.INSTANCE
 
-    // ── 慢路径（官方 API）句柄
+    // 慢路径（官方 API）句柄
     private static Object apiInstance;
     private static Method mGetConfig;
     private static Method mSetShadersEnabledAndApply;
 
-    // ── 挂起状态
+    // 挂起状态
     private static Object savedPipeline;              // 被换下的 IrisRenderingPipeline
     private static Object savedDimension;             // 对应维度 NamespacedId
     private static Object installedVanilla;           // 我们塞进去的那个 vanilla 实例
@@ -172,8 +172,8 @@ public final class IrisCompat {
                 fPipelinesPerDimension.setAccessible(true);
                 fVersionCounter.setAccessible(true);
 
-                // VanillaRenderingPipeline 与 PipelineManager 同包，用包名推导，
-                // 同时兼容 net.irisshaders.* 与 net.coderbot.* 两套命名。
+                // VanillaRenderingPipeline 与 PipelineManager 同包，用包名推导
+                // 同时兼容 net.irisshaders.* 与 net.coderbot.* 两套命名
                 vanillaPipelineClass = Class.forName(
                         mgrClass.getPackageName() + ".VanillaRenderingPipeline");
                 // destroy() 来自 WorldRenderingPipeline 接口，用于维度切换时防显存泄漏
@@ -246,8 +246,8 @@ public final class IrisCompat {
      * 开启热成像时调用：挂起光影管线。
      *
      * @return true 表示本方法已经触发过全量区块重建，调用方应跳过自己的
-     *         rebuildChunksForHeat()；false 表示什么都没做（没装光影或没开包），
-     *         调用方按原逻辑走。
+     *         rebuildChunksForHeat()；false 表示什么都没做（没装光影或没开包）
+     *         调用方按原逻辑走
      */
     public static boolean suspend() {
         if (isSuspended()) return true;
@@ -281,8 +281,8 @@ public final class IrisCompat {
             if (current == null || vanillaPipelineClass.isInstance(current)) return false;
 
             // 先快照设置：VanillaRenderingPipeline 的构造函数会清掉 blockStateIds /
-            // blockTypeIds / entityIds / useExtendedVertexFormat 等一整批字段，
-            // 这些值只在 IrisRenderingPipeline 构造时填充，恢复时必须原样塞回去。
+            // blockTypeIds / entityIds / useExtendedVertexFormat 等一整批字段
+            // 这些值只在 IrisRenderingPipeline 构造时填充，恢复时必须原样塞回去
             savedSettings = snapshotSettings();
 
             Object vanilla = vanillaPipelineClass.getDeclaredConstructor().newInstance();
@@ -293,8 +293,8 @@ public final class IrisCompat {
             perDim.put(dim, vanilla);
             fPipeline.set(mgr, vanilla);
 
-            // IrisChunkProgramOverrides 用 shadersCreated 缓存地形 program，
-            // 递增版本号才会触发它 deleteShaders() 重建。
+            // IrisChunkProgramOverrides 用 shadersCreated 缓存地形 program
+            // 递增版本号才会触发它 deleteShaders() 重建
             bumpSodiumShaderVersion(mgr);
 
             fastSuspended = true;
@@ -314,7 +314,6 @@ public final class IrisCompat {
     }
 
     // 恢复
-
     /** 关闭热成像时调用：恢复玩家原本的光影管线。 */
     public static void restore() {
         if (slowSuspended) {
@@ -362,8 +361,8 @@ public final class IrisCompat {
      *
      * Oculus 在 Minecraft.updateLevelInEngines 里，一旦维度变化就会 destroyPipeline()
      * 销毁 map 中的所有管线并重建。我们挂起的那个不在 map 里，不处理就会永久泄漏
-     * 它的 framebuffer 和纹理显存；同时新维度会重新生成一个 IrisRenderingPipeline，
-     * 光影会在热成像开着的时候突然回来。这里检测到就销毁旧的、对新的重新挂起。
+     * 它的 framebuffer 和纹理显存；同时新维度会重新生成一个 IrisRenderingPipeline
+     * 光影会在热成像开着的时候突然回来。这里检测到就销毁旧的、对新的重新挂起
      */
     public static void validate() {
         if (!fastSuspended) return;
@@ -389,9 +388,9 @@ public final class IrisCompat {
     }
 
     /**
-     * 退出世界 / 断开连接前必须调用。
-     * Iris 会销毁 map 里的所有管线；我们挂起的那个不在 map 里，
-     * 不塞回去就会泄漏 framebuffer 和纹理显存。
+     * 退出世界 / 断开连接前必须调用
+     * Iris 会销毁 map 里的所有管线；我们挂起的那个不在 map 里
+     * 不塞回去就会泄漏 framebuffer 和纹理显存
      */
     public static void releaseBeforeLevelChange() {
         if (slowSuspended) {
