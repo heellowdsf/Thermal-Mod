@@ -1,6 +1,6 @@
 modLoader="javafml"
 loaderVersion="[47,)"
-license="GPL-3.0"
+license="Mozilla Public License Version 2.0"
 
 [[mods]]
 modId="thermalvision"
